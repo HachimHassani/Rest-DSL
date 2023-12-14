@@ -1,0 +1,34 @@
+grammar org.example.restdsl.RestDsl with org.eclipse.xtext.common.Terminals
+
+generate restDsl "http://www.example.org/restdsl/RestDsl"
+
+RestDsl:
+    (entities+=Entity | restApis+=RestApi)*;
+
+Entity:
+    'entity' name=ID '{'
+        fields+=Field*
+    '}';
+
+Field:
+    name=ID ':' type=ID;
+
+RestApi:
+    'restApi' name=ID '{'
+    	'path'  path=STRING
+        (operations+=Operation)*
+        
+    '}';
+
+Operation:
+    ('create' | 'read' | 'update' | 'delete' | 'customEndpoint') name=ID ':'
+        (method=('GET' | 'POST' | 'PUT' | 'DELETE'))?
+        ('path' path=STRING)?
+        ('request' request=Type)? ('response' response=Type)?
+        ('logic' logic=Logic)?;
+
+Type:
+    type=ID;
+
+Logic:
+    '{' implementation=STRING '}';

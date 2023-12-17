@@ -15,9 +15,8 @@ Field:
 
 RestApi:
     'restApi' name=ID '{'
-    	'path'  path=STRING
+        'path'  path=STRING
         (operations+=Operation)*
-        
     '}';
 
 Operation:

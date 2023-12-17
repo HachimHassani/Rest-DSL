@@ -1,1 +1,29 @@
-.metadata
+# Eclipse
+.metadata/
+bin/
+tmp/
+.settings/
+
+# Xtext
+xtend-gen/
+src-gen/
+.mwe2/
+.model/
+
+# Build artifacts
+target/
+bin/
+
+# Compiled Java classes
+*.class
+
+# Compiled Xtend classes
+*.xtendbin
+
+# Ignore all project-specific files
+.project
+.classpath
+
+# Operating System files
+.DS_Store
+Thumbs.db

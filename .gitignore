@@ -27,3 +27,16 @@ bin/
 # Operating System files
 .DS_Store
 Thumbs.db
+
+/.m2/
+build/
+!**/src/**/build
+!**/xtend-gen/**/build
+bin/
+target/
+.gradle/
+*._trace
+*.xtendbin
+org.eclipse.buildship.core.prefs
+/.DS_Store
+**/generated/

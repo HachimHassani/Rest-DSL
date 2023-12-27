@@ -14,30 +14,80 @@ import org.eclipse.xtext.generator.IFileSystemAccess2
 import org.eclipse.xtext.generator.IGeneratorContext
 import org.example.restdsl.restDsl.Entity
 import org.example.restdsl.restDsl.RestApi
+import org.example.restdsl.restDsl.Configuration
+import org.example.restdsl.restDsl.Router
 
 // Your generator class
 class RestDslGenerator extends AbstractGenerator {
 
+	// members
+	private String projectName = "TestProject";
+	private String projectPackage = "test";
+
     // Generate method for RestDsl model
     override void doGenerate(Resource resource, IFileSystemAccess2 fsa, IGeneratorContext context) {
         for (element : resource.allContents.toIterable) {
-            // Check if the element is an Entity or RestApi
+            
+            // Generate  Entities
             if (element instanceof Entity) {
                 generateEntity(element as Entity, fsa)
-            } else if (element instanceof RestApi) {
-                generateRestApi(element as RestApi, fsa)
+            } 
+            
+            // Generate Routers
+            else if (element instanceof Router) {
+                generateRouter(element as Router, fsa)
+            }
+            
+            // Generate Spring Project and read configuration
+            else if (element instanceof Configuration) {
+            	readConfiguration(element as Configuration);
+            	generateSpringProject(element as Configuration, fsa);
             }
         }
     }
+    
+    // Method to generate spring project 
+    def generateSpringProject(Configuration config, IFileSystemAccess2 fsa)
+    {
+    	// create SpringApplication 
+    	fsa.generateFile('src/' + config.name + '.java', '''
+    	// Generated code for Spring Application
+    	
+    	package «this.projectPackage»;
+    	
+    	import «this.projectPackage».models.*;
+    	import «this.projectPackage».controllers.*;
+    	
+    	import org.springframework.boot.*;
+    	
+    	@SpringBootApplication
+    	public class «this.projectName»Application {
+    	
+    		public static void main(String[] args) {
+    			System.out.println("Running «this.projectName»");
+    			SpringApplication.run(«this.projectName»Application.class, args);
+    		}
+    	
+    	}
+    	''');
+    }
+    
+    // Methode to read configuration of the project
+    def readConfiguration(Configuration config)
+    {
+    	this.projectName = config.name;
+    	this.projectPackage = config.package;	
+    }
+    
 
     // Method to generate code for Entity
     def generateEntity(Entity entity, IFileSystemAccess2 fsa) {
-        fsa.generateFile('models/'+entity.name + '.java', '''
+        fsa.generateFile('src/models/' + entity.name + '.java', '''
             // Generate code for Entity
             // You can implement the logic to generate Spring Boot code here
             // Use entity.name, entity.fields, etc.
             // Example:
-            package generated;
+            package «this.projectPackage».models;
 
             public class «entity.name» {
                 // Fields
@@ -59,21 +109,21 @@ class RestDslGenerator extends AbstractGenerator {
         ''')
     }
 
-    // Method to generate code for RestApi
-    def generateRestApi(RestApi restApi, IFileSystemAccess2 fsa) {
-        fsa.generateFile('controllers/'+restApi.name + 'Controller.java', '''
+    // Method to generate code for Router/Controller
+    def generateRouter(Router router, IFileSystemAccess2 fsa) {
+        fsa.generateFile('src/controllers/' + router.name + 'Controller.java', '''
             // Generate code for RestApi Controller
             // You can implement the logic to generate Spring Boot code here
             // Use restApi.name, restApi.path, restApi.operations, etc.
             // Example:
-            package generated;
+            package «this.projectPackage».controllers;
 
             import org.springframework.web.bind.annotation.*;
 
             @RestController
-            @RequestMapping("«restApi.path»")
-            public class «restApi.name.toFirstUpper»Controller {
-                «FOR operation : restApi.operations»
+            @RequestMapping("«router.path»")
+            public class «router.name.toFirstUpper»Controller {
+                «FOR operation : router.operations»
                     @RequestMapping(value = "«operation.path»", method = RequestMethod.«operation.method.toUpperCase »)
                     public «operation.response.type» «operation.name»(«IF operation.request != null»@RequestBody «operation.request.type» request«ENDIF») {
                         // Implementation for the operation logic

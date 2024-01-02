@@ -23,6 +23,7 @@ class RestDslGenerator extends AbstractGenerator {
 	// members
 	private String projectName = "TestProject";
 	private String projectPackage = "test";
+	private String projectMainClass = "TestProjectApplication";
 
     // Generate method for RestDsl model
     override void doGenerate(Resource resource, IFileSystemAccess2 fsa, IGeneratorContext context) {
@@ -49,8 +50,56 @@ class RestDslGenerator extends AbstractGenerator {
     // Method to generate spring project 
     def generateSpringProject(Configuration config, IFileSystemAccess2 fsa)
     {
+    	// create maven xml 
+    	fsa.generateFile('pom.xml', '''
+		<?xml version="1.0" encoding="UTF-8"?>
+		<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+			xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+			<modelVersion>4.0.0</modelVersion>
+			<parent>
+				<groupId>org.springframework.boot</groupId>
+				<artifactId>spring-boot-starter-parent</artifactId>
+				<version>3.2.1</version>
+				<relativePath/> <!-- lookup parent from repository -->
+			</parent>
+			<groupId>com.example</groupId>
+			<artifactId>demo</artifactId>
+			<version>0.0.1-SNAPSHOT</version>
+			<name>«this.projectName»</name>
+			<packaging>jar</packaging>
+			<description>Description ...</description>
+			<properties>
+				<java.version>17</java.version>
+				<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+				<start-class>«this.projectPackage».«this.projectMainClass»</start-class>
+			</properties>
+			<dependencies>
+				<dependency>
+					<groupId>org.springframework.boot</groupId>
+					<artifactId>spring-boot-starter-web</artifactId>
+				</dependency>
+		
+				<dependency>
+					<groupId>org.springframework.boot</groupId>
+					<artifactId>spring-boot-starter-test</artifactId>
+					<scope>test</scope>
+				</dependency>
+			</dependencies>
+		
+			<build>
+				<plugins>
+					<plugin>
+						<groupId>org.springframework.boot</groupId>
+						<artifactId>spring-boot-maven-plugin</artifactId>
+					</plugin>
+				</plugins>
+			</build>	
+		
+		</project>
+    	''');
+    	
     	// create SpringApplication 
-    	fsa.generateFile('src/' + config.name + '.java', '''
+    	fsa.generateFile('src/main/java/' + this.projectMainClass + '.java', '''
     	// Generated code for Spring Application
     	
     	package «this.projectPackage»;
@@ -58,14 +107,15 @@ class RestDslGenerator extends AbstractGenerator {
     	import «this.projectPackage».models.*;
     	import «this.projectPackage».controllers.*;
     	
-    	import org.springframework.boot.*;
+    	import org.springframework.boot.SpringApplication;
+    	import org.springframework.boot.autoconfigure.SpringBootApplication;
     	
     	@SpringBootApplication
-    	public class «this.projectName»Application {
+    	public class «this.projectMainClass» {
     	
     		public static void main(String[] args) {
-    			System.out.println("Running «this.projectName»");
-    			SpringApplication.run(«this.projectName»Application.class, args);
+    			System.out.println("Running «this.projectName» ...");
+    			SpringApplication.run(«this.projectMainClass».class, args);
     		}
     	
     	}
@@ -77,17 +127,20 @@ class RestDslGenerator extends AbstractGenerator {
     {
     	this.projectName = config.name;
     	this.projectPackage = config.package;	
+    	this.projectMainClass = config.name + "Application";
     }
     
 
     // Method to generate code for Entity
     def generateEntity(Entity entity, IFileSystemAccess2 fsa) {
-        fsa.generateFile('src/models/' + entity.name + '.java', '''
+        fsa.generateFile('src/main/java/models/' + entity.name + '.java', '''
             // Generate code for Entity
             // You can implement the logic to generate Spring Boot code here
             // Use entity.name, entity.fields, etc.
             // Example:
             package «this.projectPackage».models;
+            
+            import org.springframework.ui.*;
 
             public class «entity.name» {
                 // Fields
@@ -111,14 +164,20 @@ class RestDslGenerator extends AbstractGenerator {
 
     // Method to generate code for Router/Controller
     def generateRouter(Router router, IFileSystemAccess2 fsa) {
-        fsa.generateFile('src/controllers/' + router.name + 'Controller.java', '''
+        fsa.generateFile('src/main/java/controllers/' + router.name + 'Controller.java', '''
             // Generate code for RestApi Controller
             // You can implement the logic to generate Spring Boot code here
             // Use restApi.name, restApi.path, restApi.operations, etc.
             // Example:
             package «this.projectPackage».controllers;
 
-            import org.springframework.web.bind.annotation.*;
+			import «this.projectPackage».models.*;
+            import org.springframework.stereotype.Controller;
+            import org.springframework.web.bind.annotation.RequestMapping;
+            import org.springframework.web.bind.annotation.RequestMethod;
+            import org.springframework.web.bind.annotation.RequestBody;
+            import org.springframework.web.bind.annotation.RestController;
+            import org.springframework.ui.Model;
 
             @RestController
             @RequestMapping("«router.path»")
@@ -130,6 +189,8 @@ class RestDslGenerator extends AbstractGenerator {
                         «IF operation.logic != null»
                             «operation.logic.implementation»
                         «ENDIF»
+                        
+                        return null;
                     }
                 «ENDFOR»
             }

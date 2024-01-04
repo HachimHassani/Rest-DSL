@@ -24,6 +24,7 @@ class RestDslGenerator extends AbstractGenerator {
 	private String projectName = "TestProject";
 	private String projectPackage = "test";
 	private String projectMainClass = "TestProjectApplication";
+	private final String JAVA_SOURCE_PATH = "src/main/java/";
 
     // Generate method for RestDsl model
     override void doGenerate(Resource resource, IFileSystemAccess2 fsa, IGeneratorContext context) {
@@ -99,7 +100,7 @@ class RestDslGenerator extends AbstractGenerator {
     	''');
     	
     	// create SpringApplication 
-    	fsa.generateFile('src/main/java/' + this.projectMainClass + '.java', '''
+    	fsa.generateFile(JAVA_SOURCE_PATH + this.projectMainClass + '.java', '''
     	// Generated code for Spring Application
     	
     	package «this.projectPackage»;
@@ -133,7 +134,7 @@ class RestDslGenerator extends AbstractGenerator {
 
     // Method to generate code for Entity
     def generateEntity(Entity entity, IFileSystemAccess2 fsa) {
-        fsa.generateFile('src/main/java/models/' + entity.name + '.java', '''
+        fsa.generateFile(JAVA_SOURCE_PATH + 'models/' + entity.name + '.java', '''
             // Generate code for Entity
             // You can implement the logic to generate Spring Boot code here
             // Use entity.name, entity.fields, etc.
@@ -164,7 +165,7 @@ class RestDslGenerator extends AbstractGenerator {
 
     // Method to generate code for Router/Controller
     def generateRouter(Router router, IFileSystemAccess2 fsa) {
-        fsa.generateFile('src/main/java/controllers/' + router.name + 'Controller.java', '''
+        fsa.generateFile(JAVA_SOURCE_PATH + 'controllers/' + router.name + 'Controller.java', '''
             // Generate code for RestApi Controller
             // You can implement the logic to generate Spring Boot code here
             // Use restApi.name, restApi.path, restApi.operations, etc.
@@ -194,6 +195,6 @@ class RestDslGenerator extends AbstractGenerator {
                     }
                 «ENDFOR»
             }
-        ''')
+        ''');
     }
 }

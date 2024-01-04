@@ -27,7 +27,7 @@ Router:
     '}';
 
 Operation:
-    ('create' | 'read' | 'update' | 'delete' | 'customEndpoint') name=ID ':'
+    	'endpoint' name=ID ':'
         (method=('GET' | 'POST' | 'PUT' | 'DELETE'))?
         ('path' path=STRING)?
         ('request' request=Type)? ('response' response=Type)?

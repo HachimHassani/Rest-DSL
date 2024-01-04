@@ -14,5 +14,4 @@ $ git reset --hard <branch-name>
 ```
 ## Project Description
 1. meta-model
-2. ![meta-model](./screenshots/metamodel.png)
-3. 
+     ![meta-model](./screenshots/metamodel.png)

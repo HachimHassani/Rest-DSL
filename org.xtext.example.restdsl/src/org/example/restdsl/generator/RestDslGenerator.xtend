@@ -14,30 +14,134 @@ import org.eclipse.xtext.generator.IFileSystemAccess2
 import org.eclipse.xtext.generator.IGeneratorContext
 import org.example.restdsl.restDsl.Entity
 import org.example.restdsl.restDsl.RestApi
+import org.example.restdsl.restDsl.Configuration
+import org.example.restdsl.restDsl.Router
 
 // Your generator class
 class RestDslGenerator extends AbstractGenerator {
 
+	// members
+	private String projectName = "TestProject";
+	private String projectPackage = "test";
+	private String projectMainClass = "TestProjectApplication";
+	private final String JAVA_SOURCE_PATH = "src/main/java/";
+
     // Generate method for RestDsl model
     override void doGenerate(Resource resource, IFileSystemAccess2 fsa, IGeneratorContext context) {
         for (element : resource.allContents.toIterable) {
-            // Check if the element is an Entity or RestApi
+            
+            // Generate  Entities
             if (element instanceof Entity) {
                 generateEntity(element as Entity, fsa)
-            } else if (element instanceof RestApi) {
-                generateRestApi(element as RestApi, fsa)
+            } 
+            
+            // Generate Routers
+            else if (element instanceof Router) {
+                generateRouter(element as Router, fsa)
+            }
+            
+            // Generate Spring Project and read configuration
+            else if (element instanceof Configuration) {
+            	readConfiguration(element as Configuration);
+            	generateSpringProject(element as Configuration, fsa);
             }
         }
     }
+    
+    // Method to generate spring project 
+    def generateSpringProject(Configuration config, IFileSystemAccess2 fsa)
+    {
+    	// create maven xml 
+    	fsa.generateFile('pom.xml', '''
+		<?xml version="1.0" encoding="UTF-8"?>
+		<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+			xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+			<modelVersion>4.0.0</modelVersion>
+			<parent>
+				<groupId>org.springframework.boot</groupId>
+				<artifactId>spring-boot-starter-parent</artifactId>
+				<version>3.2.1</version>
+				<relativePath/> <!-- lookup parent from repository -->
+			</parent>
+			<groupId>com.example</groupId>
+			<artifactId>demo</artifactId>
+			<version>0.0.1-SNAPSHOT</version>
+			<name>«this.projectName»</name>
+			<packaging>jar</packaging>
+			<description>Description ...</description>
+			<properties>
+				<java.version>17</java.version>
+				<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+				<start-class>«this.projectPackage».«this.projectMainClass»</start-class>
+			</properties>
+			<dependencies>
+				<dependency>
+					<groupId>org.springframework.boot</groupId>
+					<artifactId>spring-boot-starter-web</artifactId>
+				</dependency>
+		
+				<dependency>
+					<groupId>org.springframework.boot</groupId>
+					<artifactId>spring-boot-starter-test</artifactId>
+					<scope>test</scope>
+				</dependency>
+			</dependencies>
+		
+			<build>
+				<plugins>
+					<plugin>
+						<groupId>org.springframework.boot</groupId>
+						<artifactId>spring-boot-maven-plugin</artifactId>
+					</plugin>
+				</plugins>
+			</build>	
+		
+		</project>
+    	''');
+    	
+    	// create SpringApplication 
+    	fsa.generateFile(JAVA_SOURCE_PATH + this.projectMainClass + '.java', '''
+    	// Generated code for Spring Application
+    	
+    	package «this.projectPackage»;
+    	
+    	import «this.projectPackage».models.*;
+    	import «this.projectPackage».controllers.*;
+    	
+    	import org.springframework.boot.SpringApplication;
+    	import org.springframework.boot.autoconfigure.SpringBootApplication;
+    	
+    	@SpringBootApplication
+    	public class «this.projectMainClass» {
+    	
+    		public static void main(String[] args) {
+    			System.out.println("Running «this.projectName» ...");
+    			SpringApplication.run(«this.projectMainClass».class, args);
+    		}
+    	
+    	}
+    	''');
+    }
+    
+    // Methode to read configuration of the project
+    def readConfiguration(Configuration config)
+    {
+    	this.projectName = config.name;
+    	this.projectPackage = config.package;	
+    	this.projectMainClass = config.name + "Application";
+    }
+    
 
     // Method to generate code for Entity
     def generateEntity(Entity entity, IFileSystemAccess2 fsa) {
-        fsa.generateFile('models/'+entity.name + '.java', '''
+        fsa.generateFile(JAVA_SOURCE_PATH + 'models/' + entity.name + '.java', '''
             // Generate code for Entity
             // You can implement the logic to generate Spring Boot code here
             // Use entity.name, entity.fields, etc.
             // Example:
-            package generated;
+            package «this.projectPackage».models;
+            
+            import org.springframework.ui.*;
 
             public class «entity.name» {
                 // Fields
@@ -59,30 +163,38 @@ class RestDslGenerator extends AbstractGenerator {
         ''')
     }
 
-    // Method to generate code for RestApi
-    def generateRestApi(RestApi restApi, IFileSystemAccess2 fsa) {
-        fsa.generateFile('controllers/'+restApi.name + 'Controller.java', '''
+    // Method to generate code for Router/Controller
+    def generateRouter(Router router, IFileSystemAccess2 fsa) {
+        fsa.generateFile(JAVA_SOURCE_PATH + 'controllers/' + router.name + 'Controller.java', '''
             // Generate code for RestApi Controller
             // You can implement the logic to generate Spring Boot code here
             // Use restApi.name, restApi.path, restApi.operations, etc.
             // Example:
-            package generated;
+            package «this.projectPackage».controllers;
 
-            import org.springframework.web.bind.annotation.*;
+			import «this.projectPackage».models.*;
+            import org.springframework.stereotype.Controller;
+            import org.springframework.web.bind.annotation.RequestMapping;
+            import org.springframework.web.bind.annotation.RequestMethod;
+            import org.springframework.web.bind.annotation.RequestBody;
+            import org.springframework.web.bind.annotation.RestController;
+            import org.springframework.ui.Model;
 
             @RestController
-            @RequestMapping("«restApi.path»")
-            public class «restApi.name.toFirstUpper»Controller {
-                «FOR operation : restApi.operations»
+            @RequestMapping("«router.path»")
+            public class «router.name.toFirstUpper»Controller {
+                «FOR operation : router.operations»
                     @RequestMapping(value = "«operation.path»", method = RequestMethod.«operation.method.toUpperCase »)
                     public «operation.response.type» «operation.name»(«IF operation.request != null»@RequestBody «operation.request.type» request«ENDIF») {
                         // Implementation for the operation logic
                         «IF operation.logic != null»
                             «operation.logic.implementation»
                         «ENDIF»
+                        
+                        return null;
                     }
                 «ENDFOR»
             }
-        ''')
+        ''');
     }
 }

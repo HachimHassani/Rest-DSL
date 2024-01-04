@@ -2,8 +2,15 @@ grammar org.example.restdsl.RestDsl with org.eclipse.xtext.common.Terminals
 
 generate restDsl "http://www.example.org/restdsl/RestDsl"
 
-RestDsl:
-    (entities+=Entity | restApis+=RestApi)*;
+RestApi:
+	(config=Configuration)
+    (entities+=Entity | routers+=Router)*;
+
+Configuration:
+	'configuration' '{'
+		'name' ':' name=ID
+		'package' ':' package=ID
+	'}';
 
 Entity:
     'entity' name=ID '{'
@@ -13,14 +20,14 @@ Entity:
 Field:
     name=ID ':' type=ID;
 
-RestApi:
-    'restApi' name=ID '{'
+Router:
+    'router' name=ID '{'
         'path'  path=STRING
         (operations+=Operation)*
     '}';
 
 Operation:
-    ('create' | 'read' | 'update' | 'delete' | 'customEndpoint') name=ID ':'
+    	'endpoint' name=ID ':'
         (method=('GET' | 'POST' | 'PUT' | 'DELETE'))?
         ('path' path=STRING)?
         ('request' request=Type)? ('response' response=Type)?

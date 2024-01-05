@@ -3,6 +3,7 @@
  */
 package org.example.restdsl.generator
 
+import java.util.*;
 import org.eclipse.emf.ecore.resource.Resource
 import org.eclipse.xtext.generator.AbstractGenerator
 import org.eclipse.xtext.generator.IFileSystemAccess2
@@ -12,14 +13,11 @@ import org.eclipse.emf.ecore.resource.Resource
 import org.eclipse.xtext.generator.AbstractGenerator
 import org.eclipse.xtext.generator.IFileSystemAccess2
 import org.eclipse.xtext.generator.IGeneratorContext
-import org.example.restdsl.restDsl.Entity
-import org.example.restdsl.restDsl.RestApi
-import org.example.restdsl.restDsl.Configuration
-import org.example.restdsl.restDsl.Router
+import org.example.restdsl.restDsl.*
 
 // Your generator class
 class RestDslGenerator extends AbstractGenerator {
-
+	
 	// members
 	private String projectName = "TestProject";
 	private String projectPackage = "test";
@@ -51,6 +49,15 @@ class RestDslGenerator extends AbstractGenerator {
     // Method to generate spring project 
     def generateSpringProject(Configuration config, IFileSystemAccess2 fsa)
     {
+    	// create application properties
+    	fsa.generateFile('src/main/resources/application.properties', '''
+    	# Datasource configuration
+    	spring.datasource.url=jdbc:h2:mem:testdb
+    	spring.datasource.driverClassName=org.h2.Driver
+    	spring.datasource.username=sa
+    	spring.datasource.password=password
+    	spring.jpa.hibernate.ddl-auto=update''');
+    	
     	// create maven xml 
     	fsa.generateFile('pom.xml', '''
 		<?xml version="1.0" encoding="UTF-8"?>
@@ -85,6 +92,25 @@ class RestDslGenerator extends AbstractGenerator {
 					<artifactId>spring-boot-starter-test</artifactId>
 					<scope>test</scope>
 				</dependency>
+				
+				<dependency>
+			        <groupId>org.springframework.boot</groupId>
+			        <artifactId>spring-boot-starter-data-jpa</artifactId>
+			    </dependency>
+					
+				<dependency>
+				    <groupId>com.h2database</groupId>
+				    <artifactId>h2</artifactId>
+				    <scope>runtime</scope>
+				</dependency>
+				
+				<dependency>
+				    <groupId>jakarta.platform</groupId>
+				    <artifactId>jakarta.jakartaee-api</artifactId>
+				    <version>9.1.0</version> <!-- Adjust version accordingly -->
+				    <scope>provided</scope>
+				</dependency>
+				
 			</dependencies>
 		
 			<build>
@@ -97,6 +123,28 @@ class RestDslGenerator extends AbstractGenerator {
 			</build>	
 		
 		</project>
+    	''');
+    	
+    	// craete JPA Config 
+    	fsa.generateFile(JAVA_SOURCE_PATH + 'JpaConfig.java', '''
+    	// Generated code for Spring Application
+    	
+    	package «this.projectPackage»;
+    	
+    	import jakarta.persistence.EntityManager;
+    	import org.springframework.context.annotation.Bean;
+    	import org.springframework.context.annotation.Configuration;
+    	import org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean;
+    	
+    	
+    	@Configuration
+    	public class JpaConfig {
+    	
+    	    @Bean
+    	    public EntityManager entityManager(LocalContainerEntityManagerFactoryBean entityManagerFactory) {
+    	        return entityManagerFactory.getObject().createEntityManager();
+    	    }
+    	}
     	''');
     	
     	// create SpringApplication 
@@ -131,7 +179,6 @@ class RestDslGenerator extends AbstractGenerator {
     	this.projectMainClass = config.name + "Application";
     }
     
-
     // Method to generate code for Entity
     def generateEntity(Entity entity, IFileSystemAccess2 fsa) {
         fsa.generateFile(JAVA_SOURCE_PATH + 'models/' + entity.name + '.java', '''
@@ -141,13 +188,32 @@ class RestDslGenerator extends AbstractGenerator {
             // Example:
             package «this.projectPackage».models;
             
+            import jakarta.persistence.*;
             import org.springframework.ui.*;
-
+            
+            @Entity
             public class «entity.name» {
+            	// ID
+            	@Id
+            	@GeneratedValue(strategy = GenerationType.IDENTITY)
+            	private Long id;
+            	
+            	// get ID
+            	public Long getId() {
+            		return id;
+            	}
+            	
                 // Fields
                 «FOR field : entity.fields»
                     private «field.type» «field.name»;
                 «ENDFOR»
+                
+                // Copy Entity
+                void copy(«entity.name» other) {
+                	«FOR field : entity.fields»
+	                    this.«field.name» = other.«field.name»;
+	                «ENDFOR»
+                }
 
                 // Getters and setters
                 «FOR field : entity.fields»
@@ -163,38 +229,206 @@ class RestDslGenerator extends AbstractGenerator {
         ''')
     }
 
+	// Method to generate code to format String
+	def String generateFormatedString(FormatedString formatedString) 
+	{
+		return '''String.format("«formatedString.stringToFormat»"
+		«FOR value : formatedString.values»
+		 ,«value» 
+		 «ENDFOR»)''';
+	}
+	
+	// Method to generate one RequestParam as parameter for spring method for controller
+	def String generateRequestParam(RequestParam param)
+	{
+		return '''@RequestParam(name = "«param.name»", required = true) «param.type» «param.name»'''
+	}
+
+	// Method to generate request params as pararmeters for method in spring
+	def ArrayList<String> generateRequestParams(RequestParams requestParams) {
+		val ArrayList<String> params = new ArrayList<String>();
+		
+		// add first params
+		params.add(generateRequestParam(requestParams.firstParam));
+		
+		// add other params
+		for (param: requestParams.otherParams)
+		{
+			params.add(generateRequestParam(param));
+		}
+		
+		return params;
+	}
+
+	// Method to generate request body
+	def String generateRequestBody(RequestBody requestBody)
+	{
+		return '''@RequestBody «requestBody.type» «requestBody.name»''';
+	}
+	
+	// Method to generate endpoint's params
+	def String generateEndpointParams(Endpoint endpoint)
+	{
+		val ArrayList<String> params = new ArrayList();
+		
+		// add request body
+		if (endpoint.requestBody !== null)
+			params.add(generateRequestBody(endpoint.requestBody));
+		
+		// add request params
+		if (endpoint.requestParams !== null)
+			params.addAll(generateRequestParams(endpoint.requestParams));
+		
+		// return empty if params is of length 0
+		if (params.size() == 0)
+			return "";
+		
+		// generate endpoint params
+		val String firstParam = params.get(0);
+		val List<String> lastParams = (params.size() - 1 >= 1)? params.subList(1, params.size() - 1) : new ArrayList(); // last n-1 params
+			
+		return '''«firstParam»
+			«FOR param: lastParams»
+			, «param»
+			«ENDFOR»
+		''';
+	}
+
+	// Method to generate one endpoint
+	def String generateEndpoint(Endpoint endpoint)
+	{
+		return '''
+		@RequestMapping(value = "«endpoint.path»", method = RequestMethod.«endpoint.method.toUpperCase »)
+		«IF endpoint.type == 'func'»
+		«generateFuncEndpoint(endpoint, endpoint.funcLogic as FuncEndpoint)»
+		«ELSE»
+		«generateQueryEndpoint(endpoint, endpoint.queryLogic as QueryEndpoint)»
+		«ENDIF»
+		''';
+	}
+	
+	// Method to generate method for function endpoint
+	def String generateFuncEndpoint(Endpoint endpoint, FuncEndpoint funcEndpoint)
+	{
+		return '''
+		public «funcEndpoint.responseType» «endpoint.name»(«generateEndpointParams(endpoint)») {
+			// your java code here
+			«funcEndpoint.javaCode»
+		}
+		''';
+	}
+	
+	
+	// Method to generate method for query endpoint
+	def String generateQueryEndpoint(Endpoint endpoint, QueryEndpoint queryEndpoint)
+	{
+		switch (queryEndpoint.method)
+		{
+			// craete new entity
+			case "create":
+				return '''
+					public «queryEndpoint.queryType» «endpoint.name»(«generateEndpointParams(endpoint)») {
+						// Persist the new entity
+						entityManager.persist(«queryEndpoint.entity»);
+						return «queryEndpoint.entity»;
+					}'''
+			// read all entites
+			case "read":
+				return '''
+					public List<«queryEndpoint.queryType»> «endpoint.name»(«generateEndpointParams(endpoint)») {
+						TypedQuery<«queryEndpoint.queryType»> query = entityManager.createQuery("SELECT e FROM «queryEndpoint.queryType» e", «queryEndpoint.queryType».class);
+						return query.getResultList();
+					}'''
+			// read entity by id
+			case "readId":
+				return '''
+					public «queryEndpoint.queryType» «endpoint.name»(«generateEndpointParams(endpoint)») {
+						// Find the entity
+						«queryEndpoint.queryType» entity = entityManager.find(«queryEndpoint.queryType».class, «queryEndpoint.entityId»L);
+						return entity;
+					}'''
+			// update entity by id
+			case "update":
+				return '''
+					public «queryEndpoint.queryType» «endpoint.name»(«generateEndpointParams(endpoint)») {
+						// Find the entity
+						«queryEndpoint.queryType» entity = entityManager.find(«queryEndpoint.queryType».class, «queryEndpoint.entityId»L);
+						
+						if (entity == null)
+							return null;
+						
+						// update and save
+						entity.copy(«queryEndpoint.entity»);
+					    entityManager.merge(entity);
+						
+						return entity;
+					}'''
+			case "delete":
+				return '''
+					public «queryEndpoint.queryType» «endpoint.name»(«generateEndpointParams(endpoint)») {
+						// Find the entity
+						«queryEndpoint.queryType» entity = entityManager.find(«queryEndpoint.queryType».class, «queryEndpoint.entityId»L);
+						
+						if (entity == null)
+							return null;
+						
+						// remove
+						entity.remove(«queryEndpoint.entity»);
+						
+						return entity;
+					}'''
+			case "jpql":
+				return '''
+					public List<«queryEndpoint.queryType»> «endpoint.name»(«generateEndpointParams(endpoint)») {
+						TypedQuery<«queryEndpoint.queryType»> query = entityManager.createQuery(«generateFormatedString(queryEndpoint.query)», «queryEndpoint.queryType».class);
+						return query.getResultList();
+					}'''
+			default:
+				return ""
+		}
+		
+		
+	}
+
     // Method to generate code for Router/Controller
     def generateRouter(Router router, IFileSystemAccess2 fsa) {
-        fsa.generateFile(JAVA_SOURCE_PATH + 'controllers/' + router.name + 'Controller.java', '''
-            // Generate code for RestApi Controller
-            // You can implement the logic to generate Spring Boot code here
-            // Use restApi.name, restApi.path, restApi.operations, etc.
-            // Example:
-            package «this.projectPackage».controllers;
+        fsa.generateFile(JAVA_SOURCE_PATH + 'controllers/' + router.name.toFirstUpper + 'Controller.java', '''
+			// Generate code for RestApi Controller
+			// You can implement the logic to generate Spring Boot code here
+			// Use restApi.name, restApi.path, restApi.operations, etc.
+			// Example:
+			package «this.projectPackage».controllers;
 
 			import «this.projectPackage».models.*;
-            import org.springframework.stereotype.Controller;
-            import org.springframework.web.bind.annotation.RequestMapping;
-            import org.springframework.web.bind.annotation.RequestMethod;
-            import org.springframework.web.bind.annotation.RequestBody;
-            import org.springframework.web.bind.annotation.RestController;
-            import org.springframework.ui.Model;
+			import java.util.*;
+			import org.springframework.stereotype.Controller;
+			import org.springframework.web.bind.annotation.RequestMapping;
+			import org.springframework.web.bind.annotation.RequestMethod;
+			import org.springframework.web.bind.annotation.RequestBody;
+			import org.springframework.web.bind.annotation.RestController;
+			import org.springframework.web.bind.annotation.RequestParam;
+			import org.springframework.ui.Model;
+			import jakarta.persistence.*;
+			import org.springframework.beans.factory.annotation.Autowired;
+			import org.springframework.transaction.annotation.Transactional;
 
-            @RestController
-            @RequestMapping("«router.path»")
-            public class «router.name.toFirstUpper»Controller {
-                «FOR operation : router.operations»
-                    @RequestMapping(value = "«operation.path»", method = RequestMethod.«operation.method.toUpperCase »)
-                    public «operation.response.type» «operation.name»(«IF operation.request != null»@RequestBody «operation.request.type» request«ENDIF») {
-                        // Implementation for the operation logic
-                        «IF operation.logic != null»
-                            «operation.logic.implementation»
-                        «ENDIF»
-                        
-                        return null;
-                    }
-                «ENDFOR»
-            }
+			@RestController
+			@Transactional
+			@RequestMapping("«router.path»")
+			public class «router.name.toFirstUpper»Controller {
+				
+				
+			    @Autowired
+			    private EntityManager entityManager;
+			    
+			    
+			    «FOR endpoint: router.endpoints»
+			     	«generateEndpoint(endpoint)»
+			    «ENDFOR»
+			}
+
         ''');
     }
+	
+
 }

@@ -23,18 +23,74 @@ Field:
 Router:
     'router' name=ID '{'
         'path'  path=STRING
-        (operations+=Operation)*
+        (endpoints+=Endpoint)*
     '}';
 
-Operation:
+Endpoint:
     	'endpoint' name=ID ':'
-        (method=('GET' | 'POST' | 'PUT' | 'DELETE'))?
-        ('path' path=STRING)?
-        ('request' request=Type)? ('response' response=Type)?
-        ('logic' logic=Logic)?;
+        method=('GET' | 'POST' | 'PUT' | 'DELETE')
+        'path' path=STRING
+        // required params specification
+        (requestParams=RequestParams)?
+        // request body
+        (requestBody=RequestBody)?
+        
+        // endpoint type
+        (
+        	type='query' queryLogic=QueryEndpoint|
+        	type='func' funcLogic=FuncEndpoint
+        )
+		;
+        
+// Request Body
+RequestBody:
+	'body' type=ID 'as' name=ID
+;
+        
+// Request Params list
+RequestParams:
+	'params' '{'
+    	firstParam=RequestParam // first field
+    	(',' otherParams+=RequestParam)* // other fielsds
+    '}'
+;     
 
-Type:
-    type=ID;
+// one RequestParam, like field but with only types possible int string and float
+RequestParam:
+	name=ID ':' type=ID
+;
+        
+// Query 
+QueryEndpoint:
+	queryType=ID 
+	// query normal string or formated
+	// query method
+	(
+		method='create' '(' entity=ID ')'|
+		method='read' |
+		method='readId' '(' entityId=INT ')' |
+		method='update' '(' entityId=INT ',' entity=ID ')' |
+		method='delete' '(' entityId=INT ')' |
+		method='jpql' query=FormatedString
+	)
+;
+	
 
-Logic:
-    '{' implementation=STRING '}';
+
+
+// custom java function to handle endpoint
+FuncEndpoint:
+	('->' responseType=ID) // response type
+	'{'
+		javaCode=STRING
+	'}'
+;
+
+// formated string specification
+FormatedString:
+	'('
+	stringToFormat=STRING
+	(',' values+=ID)*
+	')'
+;
+    

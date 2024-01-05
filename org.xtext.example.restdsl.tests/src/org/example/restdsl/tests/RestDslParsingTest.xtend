@@ -7,7 +7,7 @@ import com.google.inject.Inject
 import org.eclipse.xtext.testing.InjectWith
 import org.eclipse.xtext.testing.extensions.InjectionExtension
 import org.eclipse.xtext.testing.util.ParseHelper
-import org.example.restdsl.restDsl.RestDsl
+import org.example.restdsl.restDsl.*
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.^extension.ExtendWith
@@ -16,7 +16,7 @@ import org.junit.jupiter.api.^extension.ExtendWith
 @InjectWith(RestDslInjectorProvider)
 class RestDslParsingTest {
 	@Inject
-	ParseHelper<RestDsl> parseHelper
+	ParseHelper<RestApi> parseHelper
 	
 	@Test
 	def void loadModel() {

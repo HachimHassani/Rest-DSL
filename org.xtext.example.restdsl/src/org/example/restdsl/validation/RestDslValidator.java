@@ -3,6 +3,13 @@
  */
 package org.example.restdsl.validation;
 
+import org.example.restdsl.semantic.*;
+
+import java.util.*;
+
+import org.eclipse.emf.ecore.EStructuralFeature;
+import org.eclipse.xtext.validation.Check;
+import org.example.restdsl.restDsl.*;
 
 /**
  * This class contains custom validation rules. 
@@ -11,15 +18,134 @@ package org.example.restdsl.validation;
  */
 public class RestDslValidator extends AbstractRestDslValidator {
 	
-//	public static final String INVALID_NAME = "invalidName";
-//
-//	@Check
-//	public void checkGreetingStartsWithCapital(Greeting greeting) {
-//		if (!Character.isUpperCase(greeting.getName().charAt(0))) {
-//			warning("Name should start with a capital",
-//					RestDslPackage.Literals.GREETING__NAME,
-//					INVALID_NAME);
-//		}
-//	}
+	// identifier manager
+	private IdentifierManager identifierManager;
 	
+	@Check
+	public void checkRestApi(RestApi restApi)
+	{
+		identifierManager = new IdentifierManager();
+		identifierManager.push();
+		
+		// do checks
+		checkEntityIsUnique(restApi);
+		checkRouterIsUnique(restApi);
+
+		// clean stack
+        identifierManager.pop();
+	}
+	
+	public void checkEntityIsUnique(RestApi restApi)
+	{
+		// add entites
+		for (Entity entity: restApi.getEntities())
+		{
+			// create entity identifier
+			try {
+				identifierManager.addIdentifier(new EntityIdentifier(entity.getName()));
+			} catch (IdentifierAlreadyExists e) {
+				error(e.getMessage(), entity, RestDslPackage.Literals.ENTITY__NAME);
+			}
+			
+			// check entity fields
+			checkFieldIsUnique(entity);
+		}
+		
+	}
+	
+	public void checkRouterIsUnique(RestApi restApi)
+	{
+		// add routers
+		for (Router router: restApi.getRouters())
+		{
+			// create router
+			try {
+				identifierManager.addIdentifier(new RouterIdentifier(router.getName()));
+			} catch (IdentifierAlreadyExists e) {
+				error(e.getMessage(), router, RestDslPackage.Literals.ROUTER__NAME);
+			}
+			
+			// check 
+			checkEndpointIsUnique(router);
+		}
+	}
+	
+	public void checkFieldIsUnique(Entity entity)
+	{
+		identifierManager.push();
+		
+		// add entites
+		for (Field field: entity.getFields())
+		{
+			try {
+				identifierManager.addIdentifier(new FieldIdentifier(field.getName(), field.getType()));
+			} catch (IdentifierAlreadyExists e) {
+				error(e.getMessage(), field, RestDslPackage.Literals.FIELD__NAME);
+			}
+		}
+		
+		// clean stack
+        identifierManager.pop();
+	}
+	
+	public void checkEndpointIsUnique(Router router)
+	{
+		identifierManager.push();
+		
+		// add endpoints
+		for (Endpoint endpoint: router.getEndpoints())
+		{
+			try {
+				identifierManager.addIdentifier(new EndpointIdentifier(endpoint.getName()));
+			} catch (IdentifierAlreadyExists e) {
+				error(e.getMessage(), endpoint, RestDslPackage.Literals.ENDPOINT__NAME);
+			}
+			
+			// check request
+			if (endpoint.getRequestParams() != null)
+				checkRequestParams(endpoint.getRequestParams());
+			
+			if (endpoint.getRequestBody() != null)
+				checkRequestBody(endpoint.getRequestBody());
+		}
+		
+		// clean stack
+        identifierManager.pop();
+	}
+	
+	public void checkRequestParams(RequestParams params)
+	{
+		List<RequestParam> requestParams = new ArrayList<>();
+		requestParams.add(params.getFirstParam());
+		requestParams.addAll(params.getOtherParams());
+		
+		// add request params
+		for (RequestParam param: requestParams)
+		{
+			try {
+				identifierManager.addIdentifier(new FieldIdentifier(param.getName(), param.getType()));
+			} catch (IdentifierAlreadyExists e) {
+				error(e.getMessage(), param, RestDslPackage.Literals.REQUEST_PARAM__NAME);
+			}
+		}
+		
+	}
+	
+	public void checkRequestBody(RequestBody body)
+	{
+
+		// add body identifier
+		try {
+			identifierManager.addIdentifier(new FieldIdentifier(body.getName(), body.getType()));
+		} catch (IdentifierAlreadyExists e) {
+			error(e.getMessage(), body, RestDslPackage.Literals.REQUEST_BODY__NAME);
+		}
+		
+		// check field type validity
+		try {
+			identifierManager.getIndetifier(body.getType(), TypeIdentifier.class);
+		} catch (IdentifierInvalid e) {
+			error(e.getMessage(), body, RestDslPackage.Literals.REQUEST_BODY__TYPE);
+		}
+	}
 }

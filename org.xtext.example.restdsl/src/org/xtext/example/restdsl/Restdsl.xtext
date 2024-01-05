@@ -66,11 +66,11 @@ QueryEndpoint:
 	// query normal string or formated
 	// query method
 	(
-		method='create' '(' createdEntity=ID ')'|
+		method='create' '(' entity=ID ')'|
 		method='read' |
-		method='readId' '(' readEntityId=INT ')' |
-		method='update' '(' updatedEntityId=INT ',' updatedEntity=ID ')' |
-		method='delete' '(' deletedEntityId=INT ')' |
+		method='readId' '(' entityId=INT ')' |
+		method='update' '(' entityId=INT ',' entity=ID ')' |
+		method='delete' '(' entityId=INT ')' |
 		method='jpql' query=FormatedString
 	)
 ;

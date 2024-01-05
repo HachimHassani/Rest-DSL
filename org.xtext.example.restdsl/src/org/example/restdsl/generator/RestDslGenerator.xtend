@@ -207,6 +207,13 @@ class RestDslGenerator extends AbstractGenerator {
                 «FOR field : entity.fields»
                     private «field.type» «field.name»;
                 «ENDFOR»
+                
+                // Copy Entity
+                void copy(«entity.name» other) {
+                	«FOR field : entity.fields»
+	                    this.«field.name» = other.«field.name»;
+	                «ENDFOR»
+                }
 
                 // Getters and setters
                 «FOR field : entity.fields»
@@ -311,15 +318,76 @@ class RestDslGenerator extends AbstractGenerator {
 		''';
 	}
 	
+	
 	// Method to generate method for query endpoint
 	def String generateQueryEndpoint(Endpoint endpoint, QueryEndpoint queryEndpoint)
 	{
-		return '''
-		public List<«queryEndpoint.queryType»> «endpoint.name»(«generateEndpointParams(endpoint)») {
-            TypedQuery<«queryEndpoint.queryType»> query = entityManager.createQuery(«generateFormatedString(queryEndpoint.query)», «queryEndpoint.queryType».class);
-            return query.getResultList();
-        }
-		''';
+		switch (queryEndpoint.method)
+		{
+			// craete new entity
+			case "create":
+				return '''
+					public «queryEndpoint.queryType» «endpoint.name»(«generateEndpointParams(endpoint)») {
+						// Persist the new entity
+						entityManager.persist(«queryEndpoint.entity»);
+						return «queryEndpoint.entity»;
+					}'''
+			// read all entites
+			case "read":
+				return '''
+					public List<«queryEndpoint.queryType»> «endpoint.name»(«generateEndpointParams(endpoint)») {
+						TypedQuery<«queryEndpoint.queryType»> query = entityManager.createQuery("SELECT e FROM «queryEndpoint.queryType» e", «queryEndpoint.queryType».class);
+						return query.getResultList();
+					}'''
+			// read entity by id
+			case "readId":
+				return '''
+					public «queryEndpoint.queryType» «endpoint.name»(«generateEndpointParams(endpoint)») {
+						// Find the entity
+						«queryEndpoint.queryType» entity = entityManager.find(«queryEndpoint.queryType».class, «queryEndpoint.entityId»L);
+						return entity;
+					}'''
+			// update entity by id
+			case "update":
+				return '''
+					public «queryEndpoint.queryType» «endpoint.name»(«generateEndpointParams(endpoint)») {
+						// Find the entity
+						«queryEndpoint.queryType» entity = entityManager.find(«queryEndpoint.queryType».class, «queryEndpoint.entityId»L);
+						
+						if (entity == null)
+							return null;
+						
+						// update and save
+						entity.copy(«queryEndpoint.entity»);
+					    entityManager.merge(entity);
+						
+						return entity;
+					}'''
+			case "delete":
+				return '''
+					public «queryEndpoint.queryType» «endpoint.name»(«generateEndpointParams(endpoint)») {
+						// Find the entity
+						«queryEndpoint.queryType» entity = entityManager.find(«queryEndpoint.queryType».class, «queryEndpoint.entityId»L);
+						
+						if (entity == null)
+							return null;
+						
+						// remove
+						entity.remove(«queryEndpoint.entity»);
+						
+						return entity;
+					}'''
+			case "jpql":
+				return '''
+					public List<«queryEndpoint.queryType»> «endpoint.name»(«generateEndpointParams(endpoint)») {
+						TypedQuery<«queryEndpoint.queryType»> query = entityManager.createQuery(«generateFormatedString(queryEndpoint.query)», «queryEndpoint.queryType».class);
+						return query.getResultList();
+					}'''
+			default:
+				return ""
+		}
+		
+		
 	}
 
     // Method to generate code for Router/Controller

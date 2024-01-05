@@ -15,6 +15,7 @@ import org.eclipse.xtext.generator.IFileSystemAccess2
 import org.eclipse.xtext.generator.IGeneratorContext
 import org.example.restdsl.restDsl.*
 
+
 // Your generator class
 class RestDslGenerator extends AbstractGenerator {
 	
@@ -24,17 +25,20 @@ class RestDslGenerator extends AbstractGenerator {
 	private String projectMainClass = "TestProjectApplication";
 	private final String JAVA_SOURCE_PATH = "src/main/java/";
 
+
     // Generate method for RestDsl model
     override void doGenerate(Resource resource, IFileSystemAccess2 fsa, IGeneratorContext context) {
+    	// generate code
         for (element : resource.allContents.toIterable) {
-            
-            // Generate  Entities
-            if (element instanceof Entity) {
-                generateEntity(element as Entity, fsa)
+        	            
+            // Process Entities
+            if (element instanceof Entity) {            	
+            	val Entity entity = element as Entity;
+                generateEntity(entity, fsa)
             } 
-            
+        	
             // Generate Routers
-            else if (element instanceof Router) {
+            if (element instanceof Router) {
                 generateRouter(element as Router, fsa)
             }
             
@@ -44,6 +48,8 @@ class RestDslGenerator extends AbstractGenerator {
             	generateSpringProject(element as Configuration, fsa);
             }
         }
+        
+        
     }
     
     // Method to generate spring project 
@@ -181,6 +187,9 @@ class RestDslGenerator extends AbstractGenerator {
     
     // Method to generate code for Entity
     def generateEntity(Entity entity, IFileSystemAccess2 fsa) {
+
+   
+    	// generate entity java class
         fsa.generateFile(JAVA_SOURCE_PATH + 'models/' + entity.name + '.java', '''
             // Generate code for Entity
             // You can implement the logic to generate Spring Boot code here

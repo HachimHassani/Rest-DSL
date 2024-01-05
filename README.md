@@ -31,6 +31,47 @@ The chosen metamodels for RestDsl include configurations, entities, routers, and
 ![meta-model](./screenshots/diaagr.png)
 
 
+## Validation
+
+The validation rules aim to enforce uniqueness constraints within the DSL. The DSL consists of entities, routers, endpoints, request parameters, and request bodies.
+
+The validation code is in the pacakges:
+
+```
+org.example.restdsl.semantic
+org.example.restdsl.validation
+```
+
+With the main code of the validation in the class ```org.example.restdsl.validation.RestDslValidator```
+
+### 1. Initialization:
+
+The code initializes an IdentifierManager to keep track of unique identifiers throughout the validation process.
+
+### 2.Validation for REST API:
+
+The main validation method (checkRestApi) checks the entire REST API for various constraints.
+It ensures that entities and routers have unique names and delegates specific checks to other methods.
+
+### 3. Entity and Router Validation:
+
+Validation methods for entities and routers ensure that each entity and router has a unique name within the DSL.
+
+### 4. Field Validation:
+
+Field validation is performed within the context of entities, ensuring that fields within an entity have unique names.
+
+### 5. Endpoint Validation:
+
+The code validates endpoints within routers, ensuring that each endpoint has a unique name.
+
+It also checks for uniqueness within request parameters and request bodies associated with each endpoint.
+
+### 6. Request Parameter and Request Body Validation:
+
+Specific validation for request parameters and request bodies ensures that they have unique names within their respective contexts.
+Additionally, there are checks to ensure the validity of types associated with request parameters and request bodies.
+
 ## Transformation
 
 The Mechanisms allowing  the transformation of DSL specifications into executable code are mainly for Code Generation, where Xtend is used to generate Java code based on the DSL specifications, automating the creation of API-related classes and methods.

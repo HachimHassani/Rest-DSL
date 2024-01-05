@@ -52,8 +52,13 @@ the transformation supports also custom java code snippets for more customized a
 ```
 $ git reset --hard <branch-name>
 ```
-## Project Description
-1. meta-model
+## How To Test the DSL
+1. Custom Ide
+    after updating the artifacts, you just need to run the src of the restdsl project as Eclipse IDe, inside which you can use and test the custom DSL
+2. Generate and run
+    Spring boot code will be generated automatically in a src-gen folder, to run it, you should just run the maven command :
+
+    mvn spring-boot:run
 
 ## Conclusion
 The RestDsl offers a powerful and efficient way to define RESTful APIs with minimal effort. By leveraging Eclipse Xtext and Xtend, developers can articulate API structures in a concise DSL, leading to automatic code generation that significantly accelerates the development process. This approach enhances maintainability, reduces errors, and promotes consistency in API design.

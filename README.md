@@ -44,6 +44,12 @@ org.example.restdsl.validation
 
 With the main code of the validation in the class ```org.example.restdsl.validation.RestDslValidator```
 
+and semantic validation defintions 
+
+![Semantic validation](./screenshots/semantic.png)
+
+
+
 ### 1. Initialization:
 
 The code initializes an IdentifierManager to keep track of unique identifiers throughout the validation process.
@@ -72,6 +78,11 @@ It also checks for uniqueness within request parameters and request bodies assoc
 Specific validation for request parameters and request bodies ensures that they have unique names within their respective contexts.
 Additionally, there are checks to ensure the validity of types associated with request parameters and request bodies.
 
+### example
+with validations, the ide will forbid the user from causing semantic errors, for example, in case of an entity that is not already existing
+
+![Alt text](./screenshots/errro.png)
+
 ## Transformation
 
 The Mechanisms allowing  the transformation of DSL specifications into executable code are mainly for Code Generation, where Xtend is used to generate Java code based on the DSL specifications, automating the creation of API-related classes and methods.
@@ -80,6 +91,160 @@ the transformation supports also custom java code snippets for more customized a
 
 ![xtend generator](./screenshots/Xtendd.png)
 
+## example
+
+after writing a proper dsl in the ide, xtend will generate a spring project automatically, for example for this dsl :
+
+```
+configuration {
+	name: Test
+	package: test
+}
+
+entity AppUser {
+    username: String
+    email: String
+}
+
+entity Post {
+    title: String 
+    content: String
+    help: String
+}
+
+router UserApi { 
+    path "/users"
+    // create user endpoint
+    endpoint createUser: POST
+		path "/create"
+		body AppUser as newUser
+		query AppUser create(newUser)
+		
+	endpoint getUsers: GET
+    	path "/"
+		query AppUser read
+		
+	endpoint getUsersByName: GET
+    	path "/name"
+    	params {
+    		username: String
+    	}
+		query AppUser jpql("SELECT e FROM AppUser e WHERE e.username = '%s'",username)
+}
+```
+
+the generated spring project will look like
+
+![Alt text](./screenshots/spring.png)
+
+for the generated controller code
+
+```
+// Generate code for RestApi Controller
+// You can implement the logic to generate Spring Boot code here
+// Use restApi.name, restApi.path, restApi.operations, etc.
+// Example:
+package test.controllers;
+
+import test.models.*;
+import java.util.*;
+import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.ui.Model;
+import jakarta.persistence.*;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.transaction.annotation.Transactional;
+
+@RestController
+@Transactional
+@RequestMapping("/users")
+public class UserApiController {
+	
+	
+    @Autowired
+    private EntityManager entityManager;
+    
+    
+    @RequestMapping(value = "/create", method = RequestMethod.POST)
+    public AppUser createUser(@RequestBody AppUser newUser
+    ) {
+    	// Persist the new entity
+    	entityManager.persist(newUser);
+    	return newUser;
+    }
+    @RequestMapping(value = "/", method = RequestMethod.GET)
+    public List<AppUser> getUsers() {
+    	TypedQuery<AppUser> query = entityManager.createQuery("SELECT e FROM AppUser e", AppUser.class);
+    	return query.getResultList();
+    }
+    @RequestMapping(value = "/name", method = RequestMethod.GET)
+    public List<AppUser> getUsersByName(@RequestParam(name = "username", required = true) String username
+    ) {
+    	TypedQuery<AppUser> query = entityManager.createQuery(String.format("SELECT e FROM AppUser e WHERE e.username = '%s'"
+    			,username 
+    			), AppUser.class);
+    	return query.getResultList();
+    }
+}
+
+```
+
+
+and for the appUser Entity:
+
+```
+// Generate code for Entity
+// You can implement the logic to generate Spring Boot code here
+// Use entity.name, entity.fields, etc.
+// Example:
+package test.models;
+
+import jakarta.persistence.*;
+import org.springframework.ui.*;
+
+@Entity
+public class AppUser {
+	// ID
+	@Id
+	@GeneratedValue(strategy = GenerationType.IDENTITY)
+	private Long id;
+	
+	// get ID
+	public Long getId() {
+		return id;
+	}
+	
+    // Fields
+    private String username;
+    private String email;
+    
+    // Copy Entity
+    void copy(AppUser other) {
+this.username = other.username;
+this.email = other.email;
+    }
+
+    // Getters and setters
+    public String getUsername() {
+        return username;
+    }
+
+    public void setUsername(String username) {
+        this.username = username;
+    }
+    public String getEmail() {
+        return email;
+    }
+
+    public void setEmail(String email) {
+        this.email = email;
+    }
+}
+```
 
 ## How to install
 
@@ -87,7 +252,7 @@ the transformation supports also custom java code snippets for more customized a
 
 2. Create  Xtext Project on your eclipse workspace in the same directory of the repository you just cloned.
 
-    ![screnshot from Eclipse IDE](./screenshots/create_project.png?raw=true)
+![screnshot from Eclipse IDE](./screenshots/create_project.png?raw=true)
 
 3. Revert changes with this command
 ```
@@ -98,7 +263,7 @@ $ git reset --hard <branch-name>
     after updating the artifacts, you just need to run the src of the restdsl project as Eclipse IDe, inside which you can use and test the custom DSL
 
 2. Add Run Configuration for Maven
-    ![screnshot from Eclipse IDE](./screenshots/runconfig.png?raw=true)
+![screnshot from Eclipse IDE](./screenshots/runconfig.png?raw=true)
 
 3. Run The Application
 

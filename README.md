@@ -28,8 +28,7 @@ The architecture of the solution involves two main components: the language defi
 
 The chosen metamodels for RestDsl include configurations, entities, routers, and endpoints. Each metamodel element captures a specific aspect of a RESTful API, enabling a comprehensive and modular description of the API structure.
 
-
-     ![meta-model](./screenshots/metamodel.png)
+![meta-model](./screenshots/diaagr.png)
 
 
 ## Transformation
@@ -38,7 +37,7 @@ The Mechanisms allowing  the transformation of DSL specifications into executabl
 the transformation supports also custom java code snippets for more customized apis, it also handles custom Queries for Entities crud operations or direct queries
 
 
-     ![xtend generator](./screenshots/xtend.png)
+![xtend generator](./screenshots/Xtendd.png)
 
 
 ## How to install
@@ -61,6 +60,9 @@ The RestDsl offers a powerful and efficient way to define RESTful APIs with mini
 
 ## the team
 Hachim HASSANI LAHSINUI
+
 KSIKS Mohamed Haitam
+
 BARKALLIL Rayan
+
 MOUTAOIKIL ANAS

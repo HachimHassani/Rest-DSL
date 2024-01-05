@@ -29,7 +29,7 @@ public class RestDslValidator extends AbstractRestDslValidator {
 	public void checkRouterIsUpper(Router router)
 	{
 		if (!Character.isUpperCase(router.getName().charAt(0)))
-			warning("Entity name should start with upper case", router, RestDslPackage.Literals.ENTITY__NAME);
+			warning("Router name should start with upper case", router, RestDslPackage.Literals.ROUTER__NAME);
 	}
 	
 	@Check
@@ -81,6 +81,7 @@ public class RestDslValidator extends AbstractRestDslValidator {
 		}
 	}
 	
+	
 	public void checkFieldIsUnique(IdentifierManager identifierManager, Entity entity)
 	{
 		identifierManager.push();
@@ -98,6 +99,7 @@ public class RestDslValidator extends AbstractRestDslValidator {
 		// clean stack
         identifierManager.pop();
 	}
+	
 	
 	public void checkEndpointIsUnique(IdentifierManager identifierManager, Router router)
 	{
@@ -165,3 +167,6 @@ public class RestDslValidator extends AbstractRestDslValidator {
 		}
 	}
 }
+
+
+	

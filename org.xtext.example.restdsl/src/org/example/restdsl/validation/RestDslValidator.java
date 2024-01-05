@@ -17,25 +17,36 @@ import org.example.restdsl.restDsl.*;
  * See https://www.eclipse.org/Xtext/documentation/303_runtime_concepts.html#validation
  */
 public class RestDslValidator extends AbstractRestDslValidator {
+
+	@Check
+	public void checkEntityIsUpper(Entity entity)
+	{
+		if (!Character.isUpperCase(entity.getName().charAt(0)))
+			warning("Entity name should start with upper case", entity, RestDslPackage.Literals.ENTITY__NAME);
+	}
 	
-	// identifier manager
-	private IdentifierManager identifierManager;
+	@Check
+	public void checkRouterIsUpper(Router router)
+	{
+		if (!Character.isUpperCase(router.getName().charAt(0)))
+			warning("Entity name should start with upper case", router, RestDslPackage.Literals.ENTITY__NAME);
+	}
 	
 	@Check
 	public void checkRestApi(RestApi restApi)
 	{
-		identifierManager = new IdentifierManager();
+		IdentifierManager identifierManager = new IdentifierManager();
 		identifierManager.push();
 		
 		// do checks
-		checkEntityIsUnique(restApi);
-		checkRouterIsUnique(restApi);
+		checkEntityIsUnique(identifierManager, restApi);
+		checkRouterIsUnique(identifierManager, restApi);
 
 		// clean stack
         identifierManager.pop();
 	}
 	
-	public void checkEntityIsUnique(RestApi restApi)
+	public void checkEntityIsUnique(IdentifierManager identifierManager, RestApi restApi)
 	{
 		// add entites
 		for (Entity entity: restApi.getEntities())
@@ -48,12 +59,12 @@ public class RestDslValidator extends AbstractRestDslValidator {
 			}
 			
 			// check entity fields
-			checkFieldIsUnique(entity);
+			checkFieldIsUnique(identifierManager, entity);
 		}
 		
 	}
 	
-	public void checkRouterIsUnique(RestApi restApi)
+	public void checkRouterIsUnique(IdentifierManager identifierManager, RestApi restApi)
 	{
 		// add routers
 		for (Router router: restApi.getRouters())
@@ -66,11 +77,11 @@ public class RestDslValidator extends AbstractRestDslValidator {
 			}
 			
 			// check 
-			checkEndpointIsUnique(router);
+			checkEndpointIsUnique(identifierManager, router);
 		}
 	}
 	
-	public void checkFieldIsUnique(Entity entity)
+	public void checkFieldIsUnique(IdentifierManager identifierManager, Entity entity)
 	{
 		identifierManager.push();
 		
@@ -88,7 +99,7 @@ public class RestDslValidator extends AbstractRestDslValidator {
         identifierManager.pop();
 	}
 	
-	public void checkEndpointIsUnique(Router router)
+	public void checkEndpointIsUnique(IdentifierManager identifierManager, Router router)
 	{
 		identifierManager.push();
 		
@@ -101,19 +112,24 @@ public class RestDslValidator extends AbstractRestDslValidator {
 				error(e.getMessage(), endpoint, RestDslPackage.Literals.ENDPOINT__NAME);
 			}
 			
+			identifierManager.push();
+			
 			// check request
 			if (endpoint.getRequestParams() != null)
-				checkRequestParams(endpoint.getRequestParams());
+				checkRequestParams(identifierManager, endpoint.getRequestParams());
 			
 			if (endpoint.getRequestBody() != null)
-				checkRequestBody(endpoint.getRequestBody());
+				checkRequestBody(identifierManager, endpoint.getRequestBody());
+			
+			identifierManager.pop();
 		}
 		
 		// clean stack
         identifierManager.pop();
 	}
 	
-	public void checkRequestParams(RequestParams params)
+	
+	public void checkRequestParams(IdentifierManager identifierManager, RequestParams params)
 	{
 		List<RequestParam> requestParams = new ArrayList<>();
 		requestParams.add(params.getFirstParam());
@@ -131,9 +147,9 @@ public class RestDslValidator extends AbstractRestDslValidator {
 		
 	}
 	
-	public void checkRequestBody(RequestBody body)
+	
+	public void checkRequestBody(IdentifierManager identifierManager, RequestBody body)
 	{
-
 		// add body identifier
 		try {
 			identifierManager.addIdentifier(new FieldIdentifier(body.getName(), body.getType()));

@@ -61,13 +61,13 @@ Validation methods for entities and routers ensure that each entity and router h
 
 Field validation is performed within the context of entities, ensuring that fields within an entity have unique names.
 
-5. Endpoint Validation:
+### 5. Endpoint Validation:
 
 The code validates endpoints within routers, ensuring that each endpoint has a unique name.
 
 It also checks for uniqueness within request parameters and request bodies associated with each endpoint.
 
-6. Request Parameter and Request Body Validation:
+### 6. Request Parameter and Request Body Validation:
 
 Specific validation for request parameters and request bodies ensures that they have unique names within their respective contexts.
 Additionally, there are checks to ensure the validity of types associated with request parameters and request bodies.
